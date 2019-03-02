@@ -1,5 +1,7 @@
 package ds.client;
 
+import ds.frontend.Request;
+
 import java.io.Serializable;
 
 public class RequestParameters implements Serializable {
