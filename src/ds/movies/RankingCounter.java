@@ -23,7 +23,7 @@ public class RankingCounter implements Serializable {
         return true;
     }
 
-    public float getRankingForUser(int userId) {
+    float getRankingForUser(int userId) {
         return userRankings.containsKey(userId) ? userRankings.get(userId) : -1;
     }
 
@@ -33,10 +33,14 @@ public class RankingCounter implements Serializable {
                 .count();
     }
 
+    public Set<Float> getRankings() {
+        return new HashSet<>(userRankings.values());
+    }
+
     @Override
     public String toString() {
         StringBuilder output = new StringBuilder();
-        Set<Float> rankings = new HashSet<>(userRankings.values());
+        Set<Float> rankings = getRankings();
 
         output.append("[ ");
         for (float ranking : rankings) {

@@ -1,10 +1,14 @@
 package ds.client;
 
 import ds.frontend.FrontEnd;
+import ds.frontend.FrontEndApi;
+import ds.movies.Movie;
 import ds.movies.MovieDetails;
+import ds.movies.RankingCounter;
 
 import java.rmi.RemoteException;
 import java.util.Scanner;
+import java.util.function.Function;
 
 @FunctionalInterface
 interface FEMutationRequest {
@@ -15,11 +19,29 @@ public class Client {
 
     private Scanner scanner = new Scanner(System.in);
 
-    private FrontEnd frontEnd;
+    private FrontEndApi frontEnd;
 
     private void assertNumberOfParameters(CommandLineInput command, int number) {
         if (command.getNumberOfArguments() < number) {
             throw new IllegalArgumentException("not enough arguments given");
+        }
+    }
+
+    private void printQueryResultsToScreen(MovieDetails movieDetails, int userId) {
+        Movie movie = movieDetails.getMovie();
+        RankingCounter rankings = movieDetails.getRankingCounter();
+
+        System.out.println("Movie Name:" + movie.getName());
+        System.out.println("Released:" + movie.getYear());
+
+        if (movieDetails.getUserRanking() != -1) {
+            System.out.printf("The user %d rated it %.2f\n", userId, movieDetails.getUserRanking());
+        }
+
+        System.out.println("Ratings:");
+
+        for (float ranking : movieDetails.getRankingCounter().getRankings()) {
+            System.out.printf("\t%.2f - %d\n", ranking, rankings.getNumberForRanking(ranking));
         }
     }
 
@@ -32,10 +54,10 @@ public class Client {
 
         MovieDetails movieDetails = frontEnd.query(parameters);
 
-        System.out.println(movieDetails);
+        printQueryResultsToScreen(movieDetails, command.getUserId());
     }
 
-    private void performMutationRequest(CommandLineInput command, FEMutationRequest mutationRequest) throws RemoteException{
+    private void performMutationRequest(CommandLineInput command, FEMutationRequest mutationRequest, Function<Boolean, String> getMessage) throws RemoteException{
         assertNumberOfParameters(command, 3);
 
         RequestParameters parameters = new RequestParameters(
@@ -43,17 +65,17 @@ public class Client {
 
         boolean success = mutationRequest.perform(parameters);
 
-        System.out.println(success ?
-                "Operation completed successfully" :
-                "Operation failed");
+        System.out.println(getMessage.apply(success));
     }
 
     private void performUpdateCommand(CommandLineInput command) throws RemoteException {
-        performMutationRequest(command, frontEnd::update);
+        performMutationRequest(command, frontEnd::update,
+                success -> success ? "Update operation was successful" : "Cannot update non-existent rating");
     }
 
     private void performSubmitCommand(CommandLineInput command) throws RemoteException {
-        performMutationRequest(command, frontEnd::submit);
+        performMutationRequest(command, frontEnd::submit,
+                success -> success ? "Submit operation was successful" : "Cannot submit an existent rating");
     }
 
     private void showHelpPrompt() {
@@ -65,8 +87,8 @@ public class Client {
     }
 
     private String askForCommand() {
-        System.out.print(">");
-        return scanner.nextLine();
+        System.out.print("> ");
+        return scanner.nextLine().trim();
     }
 
     private void startLoopInteraction() {

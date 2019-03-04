@@ -161,16 +161,16 @@ public class Replica extends TimerTask implements ReplicaApi {
         return MutationResponse.wasSuccessful(newFrontendTimestamp);
     }
 
-    private boolean isUpdateRequestInvalid(Request request) {
-        // can only update ratings that actually exist
+    private boolean isRequestAffectingExistingRating(Request request) {
         RequestParameters parameters = request.getParameters();
 
-        return !value.hasUserRankedMovie(parameters.getUserId(), parameters.getMovieId());
+        return value.hasUserRankedMovie(parameters.getUserId(), parameters.getMovieId());
     }
+
 
     @Override
     public MutationResponse update(Request request) throws RemoteException {
-        if (isUpdateRequestInvalid(request)) {
+        if (!isRequestAffectingExistingRating(request)) { // only update existing ratings.
             return MutationResponse.wasFailure(request.getTimestamp());
         }
 
@@ -179,6 +179,10 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     @Override
     public MutationResponse submit(Request request) throws RemoteException {
+        if (isRequestAffectingExistingRating(request)) { // can only submit non-existent ratings
+            return MutationResponse.wasFailure(request.getTimestamp());
+        }
+
         return scheduleMutationRequest(request);
     }
 

@@ -28,6 +28,10 @@ public class CommandLineInput {
     CommandLineInput(String command) throws NumberFormatException {
         String[] splitCommand = command.split(" ");
 
+        if (splitCommand.length < 2) {
+            throw new IllegalArgumentException("command wasn't long enough");
+        }
+
         numberOfArguments = Math.min(splitCommand.length-1, 3);
 
         movieId = Integer.parseInt(splitCommand[1]);

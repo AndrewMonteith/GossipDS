@@ -12,6 +12,7 @@ public class MovieDetails implements Serializable {
     public MovieDetails(Movie movie, RankingCounter rankingCounter) {
         this.movie = movie;
         this.rankingCounter = rankingCounter;
+        this.userRanking = -1;
     }
 
     public MovieDetails(Movie movie, RankingCounter rankingCounter, int userId) {
