@@ -132,7 +132,7 @@ public class Replica extends TimerTask implements ReplicaApi {
             } catch (NotActiveException e) {
                 System.out.println("Failed to contact the replica who had our required updates\n" +
                         "in the real world we would ask other replicas for the other updates\n" +
-                        "however I feel this is unlikely in our simulations and perhaps our the scope of this course");
+                        "however I feel this is unlikely in our simulations and perhaps out of the scope of this course");
             }
         }
 
