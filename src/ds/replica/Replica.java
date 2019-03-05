@@ -213,11 +213,11 @@ public class Replica extends TimerTask implements ReplicaApi {
     }
 
     private void broadcastGossipMessages() {
-        System.out.printf("Replica %d is gossipping\n", replicaId);
         if (status == ReplicaStatus.OFFLINE) {
             return;
         }
-        
+        System.out.printf("Replica %d is gossipping\n", replicaId);
+         
         for (int replicaNumber = 0; replicaNumber < timestampTable.size(); ++replicaNumber) {
             if (replicaNumber == replicaId) { continue; }
 
