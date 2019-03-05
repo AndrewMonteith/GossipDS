@@ -4,7 +4,9 @@ import ds.client.RequestParameters;
 import ds.core.Timestamp;
 import ds.movies.MovieDetails;
 import ds.replica.ReplicaApi;
+import ds.replica.ReplicaStatus;
 
+import java.io.NotActiveException;
 import java.rmi.RemoteException;
 import java.util.function.Function;
 
@@ -67,6 +69,13 @@ public class FrontEnd implements FrontEndApi {
     @Override
     public boolean submit(RequestParameters parameters) throws RemoteException {
         return makeMutationRequests(parameters, ReplicaApi::submit);
+    }
+
+    @Override
+    public void changeReplicaStatus(int replicaId, ReplicaStatus status) throws RemoteException {
+        try {
+            replicaPicker.getReplica(replicaId).setReplicaStatus(status);
+        } catch (NotActiveException ignored) {}
     }
 
     public FrontEnd() throws RemoteException {

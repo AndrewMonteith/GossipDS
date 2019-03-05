@@ -5,6 +5,7 @@ import ds.frontend.FrontEndApi;
 import ds.movies.Movie;
 import ds.movies.MovieDetails;
 import ds.movies.RankingCounter;
+import ds.replica.ReplicaStatus;
 
 import java.rmi.RemoteException;
 import java.util.Scanner;
@@ -49,19 +50,19 @@ public class Client {
         assertNumberOfParameters(command, 1);
 
         RequestParameters parameters = command.getNumberOfArguments() >= 2 ?
-                new RequestParameters(command.getUserId(), command.getMovieId()) :
-                new RequestParameters(-1, command.getMovieId());
+                new RequestParameters(command.getParameter2(), command.getParameter1()) :
+                new RequestParameters(-1, command.getParameter1());
 
         MovieDetails movieDetails = frontEnd.query(parameters);
 
-        printQueryResultsToScreen(movieDetails, command.getUserId());
+        printQueryResultsToScreen(movieDetails, command.getParameter2());
     }
 
-    private void performMutationRequest(CommandLineInput command, FEMutationRequest mutationRequest, Function<Boolean, String> getMessage) throws RemoteException{
+    private void performMutationRequest(CommandLineInput command, FEMutationRequest mutationRequest, Function<Boolean, String> getMessage) throws RemoteException {
         assertNumberOfParameters(command, 3);
 
         RequestParameters parameters = new RequestParameters(
-                command.getUserId(), command.getMovieId(), command.getRating());
+                command.getParameter2(), command.getParameter1(), command.getParameter3());
 
         boolean success = mutationRequest.perform(parameters);
 
@@ -78,12 +79,26 @@ public class Client {
                 success -> success ? "Submit operation was successful" : "Cannot submit an existent rating");
     }
 
+    private void performChangeStatusCommand(CommandLineInput command) throws RemoteException {
+        int replicaId = command.getParameter1();
+
+        if (replicaId < 0 || replicaId > 3) {
+            System.out.println("Replica Id must be 0, 1, or 2");
+            return;
+        }
+
+        ReplicaStatus status = ReplicaStatus.fromInteger(command.getParameter2());
+
+        frontEnd.changeReplicaStatus(replicaId, status);
+    }
+
     private void showHelpPrompt() {
         System.out.println("-- Distributed Systems Client --");
         System.out.println("Available Commands:");
         System.out.println("query <movie-id> [<user-id>]");
         System.out.println("submit <movie-id> <user-id> <rating>");
         System.out.println("update <movie-id> <user-id> <rating>");
+        System.out.println("status <replica-id> <status-id> (0=Online, 1=Overloaded, 2=Offline)");
     }
 
     private String askForCommand() {
@@ -106,8 +121,13 @@ public class Client {
                     performUpdateCommand(command);
                 } else if (input.startsWith("submit ")) {
                     performSubmitCommand(command);
+                } else if (input.startsWith("status")) {
+                    performChangeStatusCommand(command);
                 } else if ("quit".equals(input)) {
                     break;
+                } else {
+                    System.out.println("Unknown command");
+                    showHelpPrompt();
                 }
             } catch (NumberFormatException e) {
                 System.out.println("Failed to parse the input!");

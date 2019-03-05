@@ -57,4 +57,7 @@ public class ReplicaPicker {
         }
     }
 
+    public ReplicaApi getReplica(int replicaId) throws NotActiveException, RemoteException {
+        return stubLoader.getReplicaStub(replicaId);
+    }
 }

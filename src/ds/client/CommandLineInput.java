@@ -1,27 +1,27 @@
 package ds.client;
 
-public class CommandLineInput {
+class CommandLineInput {
 
-    private int movieId;
-    private int userId;
-    private float rating = -1;
+    private int parameter1;
+    private int parameter2;
+    private float parameter3 = -1;
 
     private int numberOfArguments;
 
-    public int getNumberOfArguments() {
+    int getNumberOfArguments() {
         return numberOfArguments;
     }
 
-    public int getUserId() {
-        return userId;
+    int getParameter2() {
+        return parameter2;
     }
 
-    public int getMovieId() {
-        return movieId;
+    int getParameter1() {
+        return parameter1;
     }
 
-    public float getRating() {
-        return rating;
+    float getParameter3() {
+        return parameter3;
     }
 
 
@@ -34,14 +34,14 @@ public class CommandLineInput {
 
         numberOfArguments = Math.min(splitCommand.length-1, 3);
 
-        movieId = Integer.parseInt(splitCommand[1]);
+        parameter1 = Integer.parseInt(splitCommand[1]);
 
         if (splitCommand.length > 2) {
-            userId = Integer.parseInt(splitCommand[2]);
+            parameter2 = Integer.parseInt(splitCommand[2]);
         }
 
         if (splitCommand.length > 3) {
-            rating = Float.parseFloat(splitCommand[3]);
+            parameter3 = Float.parseFloat(splitCommand[3]);
         }
     }
 }

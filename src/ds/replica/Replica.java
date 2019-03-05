@@ -41,6 +41,8 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     @Override
     public void setReplicaStatus(ReplicaStatus status) throws RemoteException {
+        System.out.printf("Replica %d is updating it's status to %s...\n", replicaId, status);
+
         this.status = status;
     }
 
@@ -126,6 +128,8 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     @Override
     public QueryResponse query(Request request) throws RemoteException {
+        System.out.printf("Replica %d is processing a query request...\n", replicaId);
+
         if (request.getTimestamp().isAfter(valueTimestamp)) {
             try {
                 catchupValue(request.getTimestamp());
@@ -170,6 +174,8 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     @Override
     public MutationResponse update(Request request) throws RemoteException {
+        System.out.printf("Replica %d is processing a update request...\n", replicaId);
+
         if (!isRequestAffectingExistingRating(request)) { // only update existing ratings.
             return MutationResponse.wasFailure(request.getTimestamp());
         }
@@ -179,6 +185,8 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     @Override
     public MutationResponse submit(Request request) throws RemoteException {
+        System.out.printf("Replica %d is processing a submit request...\n", replicaId);
+
         if (isRequestAffectingExistingRating(request)) { // can only submit non-existent ratings
             return MutationResponse.wasFailure(request.getTimestamp());
         }
@@ -205,6 +213,7 @@ public class Replica extends TimerTask implements ReplicaApi {
     }
 
     private void broadcastGossipMessages() {
+        System.out.printf("Replica %d is gossipping\n", replicaId);
         for (int replicaNumber = 0; replicaNumber < timestampTable.size(); ++replicaNumber) {
             if (replicaNumber == replicaId) { continue; }
 

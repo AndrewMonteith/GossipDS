@@ -3,6 +3,7 @@ package ds.core;
 import ds.client.RequestParameters;
 import ds.frontend.FrontEnd;
 import ds.frontend.FrontEndApi;
+import ds.frontend.Request;
 import ds.replica.Replica;
 import ds.replica.ReplicaApi;
 import ds.replica.ReplicaStatus;
@@ -20,6 +21,7 @@ import static ds.core.Utils.assertCondition;
 
 public class NetworkSimulator {
     public static final int NUMBER_OF_REPLICAS = 3;
+    private static final boolean doFrontendTests = false;
 
     private Registry registry;
 
@@ -32,7 +34,6 @@ public class NetworkSimulator {
         Map<Integer, ReplicaApi> replicas = new HashMap<>();
 
         for (int i = 0; i < NUMBER_OF_REPLICAS; ++i) {
-            System.out.printf("Launching replica %d\n", i);
             Replica replica = new Replica(i);
 
             ReplicaApi replicaStub = (ReplicaApi) UnicastRemoteObject.exportObject(replica, 0);
@@ -42,6 +43,7 @@ public class NetworkSimulator {
             t.scheduleAtFixedRate(replica, 5000, 5000);
 
             replicas.put(i, replica);
+            System.out.printf("Launched replica %d\n", i);
         }
 
         return replicas;
@@ -54,6 +56,7 @@ public class NetworkSimulator {
 
         registry.bind("frontend", frontEndStub);
 
+        System.out.println("Launched frontend");
         return fe;
     }
 
@@ -130,9 +133,11 @@ public class NetworkSimulator {
             Map<Integer, ReplicaApi> replicas = simulator.launchReplicas();
             FrontEndApi frontEndStub = simulator.launchFrontend();
 
-            doTestsWithFrontend(frontEndStub, replicas);
+            if (doFrontendTests) {
+                doTestsWithFrontend(frontEndStub, replicas);
+            }
         } catch(RemoteException e) {
-            System.out.println("Remote error occured when launching network");
+            System.out.println("Remote error occurred when launching network");
             e.printStackTrace();
         } catch (AlreadyBoundException e) {
             System.out.println("Error when binding to RMI registry, are you already running an instance of the test network?");
