@@ -27,13 +27,13 @@ public class RankingCounter implements Serializable {
         return userRankings.containsKey(userId) ? userRankings.get(userId) : -1;
     }
 
-    public int getNumberForRanking(float ranking) {
+    private int getFrequencyForRanking(float ranking) {
         return (int) userRankings.entrySet().stream()
                 .filter(entry -> entry.getValue() == ranking)
                 .count();
     }
 
-    public Set<Float> getRankings() {
+    private Set<Float> getRankings() {
         return new HashSet<>(userRankings.values());
     }
 
@@ -44,7 +44,7 @@ public class RankingCounter implements Serializable {
 
         output.append("[ ");
         for (float ranking : rankings) {
-            output.append(String.format("%.1f => %d, ", ranking, getNumberForRanking(ranking)));
+            output.append(String.format("%.1f => %d, ", ranking, getFrequencyForRanking(ranking)));
         }
         output.append(" ]");
 
@@ -53,5 +53,20 @@ public class RankingCounter implements Serializable {
 
     public boolean userHasRanked(int userId) {
         return userRankings.containsKey(userId);
+    }
+
+    public float getAverageRanking() {
+        // Weighted average of the rankings.
+        float frequencySum = 0;
+        float weightedSum = 0;
+
+        for (float ranking : getRankings()) {
+            float frequency = getFrequencyForRanking(ranking);
+
+            frequencySum += frequency;
+            weightedSum += frequency * ranking;
+        }
+
+        return weightedSum / frequencySum;
     }
 }

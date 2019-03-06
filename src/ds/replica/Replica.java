@@ -34,6 +34,15 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     private List<Timestamp> timestampTable = new ArrayList<>();
 
+    public Replica(int replicaId) throws RemoteException {
+        this.replicaId = replicaId;
+        stubLoader = new StubLoader();
+
+        for (int i = 0; i < NUMBER_OF_REPLICAS; ++i) {
+            timestampTable.add(new Timestamp(NUMBER_OF_REPLICAS));
+        }
+    }
+
     @Override
     public ReplicaStatus requestStatus() throws RemoteException {
         return status;
@@ -69,15 +78,14 @@ public class Replica extends TimerTask implements ReplicaApi {
         mergeUpdateLog(message.getUpdateLogEntries());
         updateTimestamps(message);
 
-        while (updateLog.hasStableEntry(valueTimestamp) && executeStableUpdates());
+        executeUpdatesUntilValueTimestampStabilises();
 
         clearUpdateLog();
     }
 
     @Override
     public List<UpdateLogEntry> findAllRequiredUpdates(Timestamp timestamp) throws RemoteException {
-        return updateLog.anyEntryThat(entry ->
-                entry.getUpdateTimestamp().get(replicaId) >= timestamp.get(replicaId));
+        return updateLog.anyEntryThat(entry -> timestamp.isAfter(entry.getUpdateRequest().getTimestamp()    ));
     }
 
     private boolean haveProcessedRequest(Request request) {
@@ -85,7 +93,6 @@ public class Replica extends TimerTask implements ReplicaApi {
     }
 
     private boolean executeEntry(UpdateLogEntry entry) {
-//        System.out.printf("Replica %d is executing a request\n", replicaId);
         if (haveProcessedRequest(entry.getUpdateRequest())) {
             return false;
         }
@@ -104,22 +111,32 @@ public class Replica extends TimerTask implements ReplicaApi {
                 .anyMatch(this::executeEntry);
     }
 
-    private void catchupValueWithReplica(int replicaId) throws NotActiveException, RemoteException {
+    private void executeUpdatesUntilValueTimestampStabilises() {
+        while (updateLog.hasStableEntry(valueTimestamp) && executeStableUpdates()) ;
+    }
+
+    private void catchupUpdateLog(int replicaId, Timestamp requiredTimestamp) throws NotActiveException, RemoteException {
         ReplicaApi replica = stubLoader.getReplicaStub(replicaId);
 
-        List<UpdateLogEntry> entries = replica.findAllRequiredUpdates(valueTimestamp);
+        List<UpdateLogEntry> entries = replica.findAllRequiredUpdates(requiredTimestamp);
 
         entries.forEach(updateLog::add);
     }
 
-    private void catchupValue(Timestamp requiredTimestamp) throws RemoteException, NotActiveException {
+    private void catchupValue(Timestamp requiredTimestamp) throws RemoteException {
         for (int i = 0; i < valueTimestamp.getDimension(); ++i) {
             if (valueTimestamp.get(i) < requiredTimestamp.get(i)) {
-               catchupValueWithReplica(i);
+                try {
+                    catchupUpdateLog(i, requiredTimestamp);
+                } catch (NotActiveException e) {
+                    System.out.println("Failed to contact the replica who had our required updates\n" +
+                            "in the real world we would ask other replicas for the other updates\n" +
+                            "however I feel this is unlikely in our simulations and perhaps our the scope of this course");
+                }
             }
         }
 
-        executeStableUpdates();
+        executeUpdatesUntilValueTimestampStabilises();
     }
 
     private QueryResponse performQueryRequest(Request request) {
@@ -131,13 +148,7 @@ public class Replica extends TimerTask implements ReplicaApi {
         System.out.printf("Replica %d is processing a query request...\n", replicaId);
 
         if (request.getTimestamp().isAfter(valueTimestamp)) {
-            try {
-                catchupValue(request.getTimestamp());
-            } catch (NotActiveException e) {
-                System.out.println("Failed to contact the replica who had our required updates\n" +
-                        "in the real world we would ask other replicas for the other updates\n" +
-                        "however I feel this is unlikely in our simulations and perhaps our the scope of this course");
-            }
+            catchupValue(request.getTimestamp());
         }
 
         return performQueryRequest(request);
@@ -171,7 +182,6 @@ public class Replica extends TimerTask implements ReplicaApi {
         return value.hasUserRankedMovie(parameters.getUserId(), parameters.getMovieId());
     }
 
-
     @Override
     public MutationResponse update(Request request) throws RemoteException {
         System.out.printf("Replica %d is processing a update request...\n", replicaId);
@@ -194,15 +204,6 @@ public class Replica extends TimerTask implements ReplicaApi {
         return scheduleMutationRequest(request);
     }
 
-    public Replica(int replicaId) throws RemoteException {
-        this.replicaId = replicaId;
-        stubLoader = new StubLoader();
-
-        for (int i = 0; i < NUMBER_OF_REPLICAS; ++i) {
-            timestampTable.add(new Timestamp(NUMBER_OF_REPLICAS));
-        }
-    }
-
     private void sendGossipMessage(int replicaNumber, GossipMessage message) {
         try {
             stubLoader.getReplicaStub(replicaNumber).processGossipMessage(message);
@@ -217,9 +218,11 @@ public class Replica extends TimerTask implements ReplicaApi {
             return;
         }
         System.out.printf("Replica %d is gossipping\n", replicaId);
-         
+
         for (int replicaNumber = 0; replicaNumber < timestampTable.size(); ++replicaNumber) {
-            if (replicaNumber == replicaId) { continue; }
+            if (replicaNumber == replicaId) {
+                continue;
+            }
 
             Timestamp estimatedTimestamp = timestampTable.get(replicaNumber);
 
@@ -230,8 +233,25 @@ public class Replica extends TimerTask implements ReplicaApi {
         }
     }
 
+    private void changeReplicaStatus() {
+        Random r = new Random();
+
+        int i = r.nextInt(100);
+        if (i < 10) {
+            status = ReplicaStatus.OFFLINE;
+        } else if (i < 20) {
+            status = ReplicaStatus.OVERLOADED;
+        } else {
+            status = ReplicaStatus.ACTIVE;
+        }
+
+        System.out.println("Changed status to " + status);
+    }
+
     @Override
     public void run() {
+//        changeReplicaStatus();
+
         broadcastGossipMessages();
     }
 }

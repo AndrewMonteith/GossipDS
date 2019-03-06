@@ -32,6 +32,10 @@ public class FrontEnd implements FrontEndApi {
         return response.getMovieDetails();
     }
 
+    public void resetReplicaPickerState() {
+        replicaPicker.resetLastContactedState();
+    }
+
     @FunctionalInterface
     private interface MutationRequestMaker {
         MutationResponse sendRequest(ReplicaApi replica, Request request) throws RemoteException;

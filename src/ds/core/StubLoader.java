@@ -40,7 +40,7 @@ public class StubLoader {
         }
     }
 
-    public ReplicaStatus getStatusFor(int replicaId) {
+    public ReplicaStatus getCachedStatusFor(int replicaId) {
         return replicaStatuses.get(replicaId);
     }
 

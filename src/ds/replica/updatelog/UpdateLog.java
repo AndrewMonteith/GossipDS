@@ -41,8 +41,7 @@ public class UpdateLog {
 
     private boolean logContainsEntryWithTimestamp(Request request) {
         return entries.stream()
-                .anyMatch(entry -> entry.getUpdateRequest().getUid()
-                        .equals(request.getUid()));
+                .anyMatch(entry -> entry.getUpdateRequest().getUid().equals(request.getUid()));
     }
 
     public void add(int replicaId, Timestamp updateTimestamp, Request request) {

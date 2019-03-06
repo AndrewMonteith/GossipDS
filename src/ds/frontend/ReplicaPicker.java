@@ -13,51 +13,78 @@ import java.util.List;
 
 import static ds.core.NetworkSimulator.NUMBER_OF_REPLICAS;
 
-public class ReplicaPicker {
+class ReplicaPicker {
     private Deque<Integer> lastContactedReplicas = new ArrayDeque<>();
     private StubLoader stubLoader;
 
-    private ReplicaApi getReplicaApiIfContactable(int id) throws RemoteException {
+    private boolean isReplicaInStatus(int id, ReplicaStatus status) throws RemoteException {
         try {
-            return stubLoader.getReplicaStub(id);
-        } catch (NotActiveException e) {
-            return null;
+            stubLoader.getReplicaStub(id);
+
+            return stubLoader.getCachedStatusFor(id) == status;
+        } catch (NotActiveException ignored) {
+            return status == ReplicaStatus.OFFLINE;
         }
+
     }
 
-    public synchronized List<ReplicaApi> pickReplicasToContact(int number) throws RemoteException {
-        List<ReplicaApi> replicaStubs = new ArrayList<>();
-        List<Integer> replicaIds = new ArrayList<>();
+    private List<Integer> chooseReplicasWithStatus(int number, ReplicaStatus status) throws RemoteException {
+        List<Integer> acceptedReplicaIds = new ArrayList<>();
 
-        for (int i = 0; i < lastContactedReplicas.size() && replicaStubs.size() < number; ++i) {
+        for (int i = 0; i < lastContactedReplicas.size() && acceptedReplicaIds.size() < number; ++i) {
             int replicaId = lastContactedReplicas.removeFirst();
-            ReplicaApi replica = getReplicaApiIfContactable(replicaId);
 
-            if (replica != null && stubLoader.getStatusFor(replicaId) == ReplicaStatus.ACTIVE) {
-                replicaStubs.add(replica);
-                replicaIds.add(replicaId);
+            if (isReplicaInStatus(replicaId, status)) {
+                acceptedReplicaIds.add(replicaId);
             } else {
                 lastContactedReplicas.addLast(replicaId);
             }
         }
 
+        return acceptedReplicaIds;
+    }
+
+    private List<ReplicaApi> loadReplicasFromIds(List<Integer> replicaIds) {
+        List<ReplicaApi> replicas = new ArrayList<>();
+
+        for (int replicaId : replicaIds) {
+            try {
+                replicas.add(stubLoader.getReplicaStub(replicaId));
+            } catch (RemoteException | NotActiveException ignored) {}
+        }
+
+        return replicas;
+    }
+
+    synchronized List<ReplicaApi> pickReplicasToContact(int number) throws RemoteException {
+        List<Integer> replicaIds = chooseReplicasWithStatus(number, ReplicaStatus.ACTIVE);
+
         if (replicaIds.isEmpty()) {
-            throw new RemoteException("no replicas to contact, network is offline.");
+            replicaIds = chooseReplicasWithStatus(number, ReplicaStatus.OVERLOADED);
+        }
+
+        if (replicaIds.isEmpty()) {
+            throw new RemoteException("all replicas were offline, please consider restarting one.");
         }
 
         replicaIds.forEach(lastContactedReplicas::addFirst);
 
-        return replicaStubs;
+        return loadReplicasFromIds(replicaIds);
     }
 
-    public ReplicaPicker() throws RemoteException {
+    void resetLastContactedState() {
+        lastContactedReplicas.clear();
         for (int i = 0; i < NUMBER_OF_REPLICAS; ++i) {
             lastContactedReplicas.addLast(i);
-            stubLoader = new StubLoader();
         }
     }
 
-    public ReplicaApi getReplica(int replicaId) throws NotActiveException, RemoteException {
+    ReplicaPicker() throws RemoteException {
+        stubLoader = new StubLoader();
+        resetLastContactedState();
+    }
+
+    ReplicaApi getReplica(int replicaId) throws NotActiveException, RemoteException {
         return stubLoader.getReplicaStub(replicaId);
     }
 }

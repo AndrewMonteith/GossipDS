@@ -41,6 +41,6 @@ public class Request implements Serializable {
     }
 
     public boolean isStable(Timestamp valueTimestamp) {
-        return timestamp.isBeforeOrEqual(valueTimestamp);
+       return timestamp.isBeforeOrEqual(valueTimestamp);
     }
 }

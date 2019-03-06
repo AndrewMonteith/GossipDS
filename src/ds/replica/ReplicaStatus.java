@@ -15,4 +15,13 @@ public enum ReplicaStatus implements Serializable  {
             default: throw new IllegalArgumentException("invalid id");
         }
     }
+
+    public String toString() {
+        switch(this) {
+            case ACTIVE: return "ACTIVE";
+            case OVERLOADED: return "OVERLOADED";
+            case OFFLINE: return "Offline";
+            default: throw new RuntimeException("failed to update toString method");
+        }
+    }
 }

@@ -22,6 +22,20 @@ public class Client {
 
     private FrontEndApi frontEnd;
 
+    public Client() throws RemoteException {
+        frontEnd = new FrontEnd();
+    }
+
+    public static void main(String[] args) {
+        try {
+            Client client = new Client();
+
+            client.startLoopInteraction();
+        } catch (RemoteException e) {
+            System.out.println("A remote exception occurred ");
+        }
+    }
+
     private void assertNumberOfParameters(CommandLineInput command, int number) {
         if (command.getNumberOfArguments() < number) {
             throw new IllegalArgumentException("not enough arguments given");
@@ -39,11 +53,7 @@ public class Client {
             System.out.printf("The user %d rated it %.2f\n", userId, movieDetails.getUserRanking());
         }
 
-        System.out.println("Ratings:");
-
-        for (float ranking : movieDetails.getRankingCounter().getRankings()) {
-            System.out.printf("\t%.2f - %d\n", ranking, rankings.getNumberForRanking(ranking));
-        }
+        System.out.println("Average Rating:" + rankings.getAverageRanking());
     }
 
     private void performQueryCommand(CommandLineInput command) throws RemoteException {
@@ -137,21 +147,8 @@ public class Client {
                 showHelpPrompt();
             } catch (RemoteException e) {
                 System.out.println("A remote error occurred during an operation");
+                e.printStackTrace();
             }
-        }
-    }
-
-    public Client() throws RemoteException {
-        frontEnd = new FrontEnd();
-    }
-
-    public static void main(String[] args) {
-        try {
-            Client client = new Client();
-
-            client.startLoopInteraction();
-        } catch (RemoteException e) {
-            System.out.println("A remote exception occurred ");
         }
     }
 }

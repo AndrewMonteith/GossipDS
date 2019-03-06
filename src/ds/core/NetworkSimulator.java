@@ -3,7 +3,6 @@ package ds.core;
 import ds.client.RequestParameters;
 import ds.frontend.FrontEnd;
 import ds.frontend.FrontEndApi;
-import ds.frontend.Request;
 import ds.replica.Replica;
 import ds.replica.ReplicaApi;
 import ds.replica.ReplicaStatus;
@@ -23,47 +22,19 @@ public class NetworkSimulator {
     public static final int NUMBER_OF_REPLICAS = 3;
     private static final boolean doFrontendTests = false;
 
+    private static final long GOSSIP_PERIOD = 10000; // milliseconds
+
     private Registry registry;
 
     private NetworkSimulator() throws RemoteException {
         registry = LocateRegistry.createRegistry(13007);
     }
 
-    private Map<Integer, ReplicaApi> launchReplicas() throws RemoteException, AlreadyBoundException {
-        Timer t = new Timer();
-        Map<Integer, ReplicaApi> replicas = new HashMap<>();
-
-        for (int i = 0; i < NUMBER_OF_REPLICAS; ++i) {
-            Replica replica = new Replica(i);
-
-            ReplicaApi replicaStub = (ReplicaApi) UnicastRemoteObject.exportObject(replica, 0);
-
-            registry.bind("replica-" + i, replicaStub);
-
-            t.scheduleAtFixedRate(replica, 5000, 5000);
-
-            replicas.put(i, replica);
-            System.out.printf("Launched replica %d\n", i);
-        }
-
-        return replicas;
-    }
-
-    private FrontEndApi launchFrontend() throws RemoteException, AlreadyBoundException {
-        FrontEnd fe = new FrontEnd();
-
-        FrontEndApi frontEndStub = (FrontEndApi) UnicastRemoteObject.exportObject(fe, 0);
-
-        registry.bind("frontend", frontEndStub);
-
-        System.out.println("Launched frontend");
-        return fe;
-    }
-
     private static void safeSleep(long milliseconds) {
         try {
             Thread.sleep(milliseconds);
-        } catch (InterruptedException ignored) { }
+        } catch (InterruptedException ignored) {
+        }
     }
 
     private static void doTestsWithQuerying(FrontEndApi serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
@@ -88,7 +59,7 @@ public class NetworkSimulator {
 
     private static void doTestsWithSubmit(FrontEndApi serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
         assertCondition(serviceApi.submit(new RequestParameters(1, 2, 3.0f)),
-                        "submit request was accepted");
+                "submit request was accepted");
 
         assertCondition(serviceApi.query(new RequestParameters(1, 2)).getUserRanking() == 3.0f,
                 "submit request actually happened");
@@ -97,7 +68,7 @@ public class NetworkSimulator {
     private static void doTestsWithGossipMessages(FrontEndApi serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
         serviceApi.update(new RequestParameters(1, 47, 4.5f));
 
-        safeSleep(7500); // wait for gossip to update everyone
+        safeSleep(GOSSIP_PERIOD + 2500); // wait for gossip to update everyone
 
         replicas.get(0).setReplicaStatus(ReplicaStatus.OFFLINE);
         replicas.get(1).setReplicaStatus(ReplicaStatus.OFFLINE);
@@ -105,23 +76,70 @@ public class NetworkSimulator {
         assertCondition(serviceApi.query(new RequestParameters(1, 47)).getUserRanking() == 4.5f,
                 "gossip message propagate updates");
 
-        serviceApi.submit(new RequestParameters(30, 100, 2.5f));
+        assertCondition(serviceApi.submit(new RequestParameters(30, 100, 2.5f)),
+                "gossip test accepted submit");
 
         replicas.get(0).setReplicaStatus(ReplicaStatus.ACTIVE);
         replicas.get(1).setReplicaStatus(ReplicaStatus.ACTIVE);
 
-        safeSleep(7500); // wait for gossip to update everyone
+        safeSleep(GOSSIP_PERIOD + 2500); // wait for gossip to update everyone
         replicas.get(2).setReplicaStatus(ReplicaStatus.OFFLINE);
 
         assertCondition(serviceApi.query(new RequestParameters(30, 100)).getUserRanking() == 2.5f,
                 "gossip message propagates updates #2");
+
+
+        replicas.get(2).setReplicaStatus(ReplicaStatus.ACTIVE);
     }
 
-    private static void doTestsWithFrontend(FrontEndApi serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
+    private static void doMiniStressTest(FrontEnd serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
+        assertCondition(serviceApi.update(new RequestParameters(1, 47, 5.0f)),
+                "accepted s.t. update #1");
+        assertCondition(serviceApi.update(new RequestParameters(30, 100, 5.0f)),
+                "accepted s.t. update #2");
+        assertCondition(serviceApi.update(new RequestParameters(1, 2, 5.0f)),
+                "accepted s.t. update #3");
+
+        replicas.get(1).setReplicaStatus(ReplicaStatus.OVERLOADED);
+
+        safeSleep( 1000);
+
+        assertCondition(serviceApi.query(new RequestParameters(30, 100)).getUserRanking() == 5.0f,
+                "stress test checkpoint #1");
+
+        replicas.get(1).setReplicaStatus(ReplicaStatus.OFFLINE);
+        replicas.get(0).setReplicaStatus(ReplicaStatus.OFFLINE);
+
+        assertCondition(serviceApi.update(new RequestParameters(1, 47, 2.0f)),
+                "accepted s.t. update #4");
+        assertCondition(serviceApi.update(new RequestParameters(30, 100, 2.0f)),
+                "accepted s.t. update #5");
+        assertCondition(serviceApi.update(new RequestParameters(1, 2, 2.0f)),
+                "accepted s.t. update #6");
+
+        safeSleep(1000);
+
+        serviceApi.resetReplicaPickerState();
+        replicas.get(1).setReplicaStatus(ReplicaStatus.ACTIVE);
+        replicas.get(0).setReplicaStatus(ReplicaStatus.ACTIVE);
+
+        assertCondition(serviceApi.query(new RequestParameters(1, 2)).getUserRanking() == 2.0f,
+                "stress test checkpoint #2");
+    }
+
+    private static void doTestsWithFrontend(FrontEnd serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
         doTestsWithQuerying(serviceApi, replicas);
         doTestsWithUpdate(serviceApi, replicas);
         doTestsWithSubmit(serviceApi, replicas);
         doTestsWithGossipMessages(serviceApi, replicas);
+
+        serviceApi.resetReplicaPickerState(); // so we can reason about what to turn off during mini-stress test.
+
+        doMiniStressTest(serviceApi, replicas);
+
+        for (ReplicaApi replicaApi : replicas.values()) {
+            replicaApi.setReplicaStatus(ReplicaStatus.ACTIVE);
+        }
 
         System.out.println(" --- FINISHED ALL TESTS ---");
     }
@@ -131,16 +149,47 @@ public class NetworkSimulator {
             NetworkSimulator simulator = new NetworkSimulator();
 
             Map<Integer, ReplicaApi> replicas = simulator.launchReplicas();
-            FrontEndApi frontEndStub = simulator.launchFrontend();
+            FrontEnd frontEndStub = simulator.launchFrontend();
 
             if (doFrontendTests) {
                 doTestsWithFrontend(frontEndStub, replicas);
             }
-        } catch(RemoteException e) {
+        } catch (RemoteException e) {
             System.out.println("Remote error occurred when launching network");
             e.printStackTrace();
         } catch (AlreadyBoundException e) {
             System.out.println("Error when binding to RMI registry, are you already running an instance of the test network?");
         }
+    }
+
+    private Map<Integer, ReplicaApi> launchReplicas() throws RemoteException, AlreadyBoundException {
+        Timer t = new Timer();
+        Map<Integer, ReplicaApi> replicas = new HashMap<>();
+
+        for (int i = 0; i < NUMBER_OF_REPLICAS; ++i) {
+            Replica replica = new Replica(i);
+
+            ReplicaApi replicaStub = (ReplicaApi) UnicastRemoteObject.exportObject(replica, 0);
+
+            registry.bind("replica-" + i, replicaStub);
+
+            t.scheduleAtFixedRate(replica, GOSSIP_PERIOD, GOSSIP_PERIOD);
+
+            replicas.put(i, replica);
+            System.out.printf("Launched replica %d\n", i);
+        }
+
+        return replicas;
+    }
+
+    private FrontEnd launchFrontend() throws RemoteException, AlreadyBoundException {
+        FrontEnd fe = new FrontEnd();
+
+        FrontEndApi frontEndStub = (FrontEndApi) UnicastRemoteObject.exportObject(fe, 0);
+
+        registry.bind("frontend", frontEndStub);
+
+        System.out.println("Launched frontend");
+        return fe;
     }
 }
