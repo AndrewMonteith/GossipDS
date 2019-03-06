@@ -5,7 +5,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MovieReader {
+    private final Pattern nameAndYearPattern = Pattern.compile("([^\\(]+) \\((\\d+)\\)");
     private CSVReader reader;
+
+    public MovieReader() {
+        reader = new CSVReader("./movie-data/movies.csv");
+    }
 
     public boolean hasNextMovie() {
         return reader.hasNextLine();
@@ -14,8 +19,6 @@ public class MovieReader {
     private String[] splitAttributeString(String attributeString) {
         return attributeString.split("|");
     }
-
-    private final Pattern nameAndYearPattern = Pattern.compile("([^\\(]+) \\((\\d+)\\)");
 
     public Movie readMovie() {
         List<String> attributes = reader.readAttributes();
@@ -35,9 +38,5 @@ public class MovieReader {
         } else {
             return new Movie(id, rawName, -1, genres);
         }
-    }
-
-    public MovieReader() {
-        reader = new CSVReader("./movie-data/movies.csv");
     }
 }

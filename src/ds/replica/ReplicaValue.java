@@ -11,7 +11,15 @@ public class ReplicaValue {
     private Map<Integer, Movie> movies;
     private Map<Integer, RankingCounter> rankings;
 
-    public MovieDetails getDetailsForMovie(RequestParameters parameters) {
+    ReplicaValue() {
+        movies = new HashMap<>();
+        rankings = new HashMap<>();
+
+        loadMoviesIntoMemory();
+        loadMovieRankings();
+    }
+
+    MovieDetails getDetailsForMovie(RequestParameters parameters) {
         int userId = parameters.getUserId();
 
         Movie movie = movies.get(parameters.getMovieId());
@@ -25,17 +33,16 @@ public class ReplicaValue {
                 .setRanking(userId, ranking);
     }
 
-    public void setRanking(RequestParameters parameters) {
+    void setRanking(RequestParameters parameters) {
         setRanking(parameters.getUserId(), parameters.getMovieId(), parameters.getRanking());
     }
-
 
     public boolean updateRanking(RequestParameters parameters) {
         return rankings.get(parameters.getMovieId())
                 .updateRanking(parameters.getUserId(), parameters.getRanking());
     }
 
-    public boolean hasUserRankedMovie(int userId, int movieId) {
+    boolean hasUserRankedMovie(int userId, int movieId) {
         return movies.containsKey(movieId)
                 && rankings.get(movieId).userHasRanked(userId);
     }
@@ -63,14 +70,6 @@ public class ReplicaValue {
 
             setRanking(userId, movieId, ranking);
         }
-    }
-
-    public ReplicaValue() {
-        movies = new HashMap<>();
-        rankings = new HashMap<>();
-
-        loadMoviesIntoMemory();
-        loadMovieRankings();
     }
 
 }

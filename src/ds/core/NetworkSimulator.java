@@ -18,10 +18,32 @@ import java.util.Timer;
 
 import static ds.core.Utils.assertCondition;
 
+/**
+ * This class is responsible for simulating running the distributed network.
+ * Ie this class provides all functionality required minus the client.
+ */
 public class NetworkSimulator {
+    /**
+     * The number of replicas we want to have in the distributed network.
+     */
     public static final int NUMBER_OF_REPLICAS = 3;
+
+    /**
+     * Whether or not you want to run the provided unit tests.
+     * <p>
+     * The unit tests cover the following functionality:
+     * - Whether querying the network works.
+     * - Whether updating existing ratings in the network works.
+     * - Whether submitting new ratings in the network works.
+     * - Whether or not updates propagate via gossip messages
+     * - Whether the network can handle 1 fault
+     * - Whether a replica will always provide consistent data to the frontend
+     */
     private static final boolean doFrontendTests = false;
 
+    /**
+     * How often a replica will gossip.
+     */
     private static final long GOSSIP_PERIOD = 10000; // milliseconds
 
     private Registry registry;
@@ -102,7 +124,7 @@ public class NetworkSimulator {
 
         replicas.get(1).setReplicaStatus(ReplicaStatus.OVERLOADED);
 
-        safeSleep( 1000);
+        safeSleep(1000);
 
         assertCondition(serviceApi.query(new RequestParameters(30, 100)).getUserRanking() == 5.0f,
                 "stress test checkpoint #1");

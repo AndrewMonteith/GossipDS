@@ -1,15 +1,26 @@
 package ds.client;
 
-import ds.frontend.Request;
-
 import java.io.Serializable;
 
+/**
+ * Metadata associated with each request made to a network.
+ */
 public class RequestParameters implements Serializable {
     private int movieId;
 
     private int userId;
 
     private float ranking;
+
+    public RequestParameters(int userId, int movieId) {
+        this.userId = userId;
+        this.movieId = movieId;
+    }
+
+    public RequestParameters(int userId, int movieId, float ranking) {
+        this(userId, movieId);
+        this.ranking = ranking;
+    }
 
     public int getMovieId() {
         return movieId;
@@ -21,15 +32,5 @@ public class RequestParameters implements Serializable {
 
     public float getRanking() {
         return ranking;
-    }
-
-    public RequestParameters(int userId, int movieId) {
-        this.userId = userId;
-        this.movieId = movieId;
-    }
-
-    public RequestParameters(int userId, int movieId, float ranking) {
-        this(userId, movieId);
-        this.ranking = ranking;
     }
 }

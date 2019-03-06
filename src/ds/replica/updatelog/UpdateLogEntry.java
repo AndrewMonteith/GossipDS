@@ -12,30 +12,28 @@ public class UpdateLogEntry implements Comparable<UpdateLogEntry>, Serializable 
      * after the mutation is applied to the value.
      */
     private Timestamp updateTimestamp;
-
-    public Timestamp getUpdateTimestamp() {
-        return updateTimestamp;
-    }
-
     /**
      * Replica ID who was the source of the update request.
      */
     private int replicaId;
-
-    public int getReplicaId() {
-        return replicaId;
-    }
-
     private Request updateRequest;
-
-    public Request getUpdateRequest() {
-        return updateRequest;
-    }
 
     public UpdateLogEntry(int replicaId, Timestamp updateTimestamp, Request updateRequest) {
         this.replicaId = replicaId;
         this.updateTimestamp = updateTimestamp;
         this.updateRequest = updateRequest;
+    }
+
+    public Timestamp getUpdateTimestamp() {
+        return updateTimestamp;
+    }
+
+    public int getReplicaId() {
+        return replicaId;
+    }
+
+    public Request getUpdateRequest() {
+        return updateRequest;
     }
 
     @Override

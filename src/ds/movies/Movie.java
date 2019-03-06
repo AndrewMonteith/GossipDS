@@ -2,6 +2,9 @@ package ds.movies;
 
 import java.io.Serializable;
 
+/**
+ * Simple data class for movie objects.
+ */
 public class Movie implements Serializable {
     private int id;
 
@@ -10,6 +13,13 @@ public class Movie implements Serializable {
     private int year;
 
     private String[] genres;
+
+    public Movie(int id, String name, int year, String[] genres) {
+        this.id = id;
+        this.name = name;
+        this.year = year;
+        this.genres = genres;
+    }
 
     public String getName() {
         return name;
@@ -25,13 +35,6 @@ public class Movie implements Serializable {
 
     public String[] getGenres() {
         return genres;
-    }
-
-    public Movie(int id, String name, int year, String[] genres) {
-        this.id = id;
-        this.name = name;
-        this.year = year;
-        this.genres = genres;
     }
 
     @Override

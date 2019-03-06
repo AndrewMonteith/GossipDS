@@ -9,6 +9,15 @@ import java.util.Scanner;
 public class CSVReader {
     private Scanner scanner;
 
+    public CSVReader(String fileName) {
+        try {
+            scanner = new Scanner(new File(fileName));
+            scanner.nextLine(); // Skip title line.
+        } catch (FileNotFoundException e) {
+            throw new IllegalArgumentException("initalisation error, couldn't read data " + fileName);
+        }
+    }
+
     private List<String> splitLineIntoAttributes(String line) {
         // There may be a CSV in an attribute, escaped using quotes.
         // So just splitting by "," will not work.
@@ -28,7 +37,7 @@ public class CSVReader {
                     }
                 }
 
-                attribute = attribute.substring(1, attribute.length()-1);
+                attribute = attribute.substring(1, attribute.length() - 1);
             }
 
             attributes.add(attribute);
@@ -48,13 +57,4 @@ public class CSVReader {
     public boolean hasNextLine() {
         return scanner.hasNextLine();
     }
-
-    public CSVReader(String fileName)  {
-        try {
-            scanner = new Scanner(new File(fileName));
-            scanner.nextLine(); // Skip title line.
-        } catch (FileNotFoundException e) {
-            throw new IllegalArgumentException("initalisation error, couldn't read data " + fileName);
-        }
-   }
 }

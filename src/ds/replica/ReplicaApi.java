@@ -18,6 +18,7 @@ public interface ReplicaApi extends Remote {
 
     /**
      * Update status of replica whether you want to knock if offline or online again
+     *
      * @param status new status of the replica
      * @throws RemoteException if fail to reach replica
      */
@@ -25,6 +26,7 @@ public interface ReplicaApi extends Remote {
 
     /**
      * Makes replica process the gossip message from another replica
+     *
      * @param message what the replica will process
      * @throws RemoteException
      */
@@ -34,6 +36,7 @@ public interface ReplicaApi extends Remote {
     /**
      * returns all updates from a replicas's update log that is before timestamp
      * used so a replica can update it's update log if it's trying to catchup
+     *
      * @param timestamp to compare against each update log entry
      * @return all updates that are before timestamp
      * @throws RemoteException

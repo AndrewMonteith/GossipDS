@@ -8,6 +8,26 @@ class CommandLineInput {
 
     private int numberOfArguments;
 
+    CommandLineInput(String command) throws NumberFormatException {
+        String[] splitCommand = command.split(" ");
+
+        if (splitCommand.length < 2) {
+            throw new IllegalArgumentException("command wasn't long enough");
+        }
+
+        numberOfArguments = Math.min(splitCommand.length - 1, 3);
+
+        parameter1 = Integer.parseInt(splitCommand[1]);
+
+        if (splitCommand.length > 2) {
+            parameter2 = Integer.parseInt(splitCommand[2]);
+        }
+
+        if (splitCommand.length > 3) {
+            parameter3 = Float.parseFloat(splitCommand[3]);
+        }
+    }
+
     int getNumberOfArguments() {
         return numberOfArguments;
     }
@@ -22,26 +42,5 @@ class CommandLineInput {
 
     float getParameter3() {
         return parameter3;
-    }
-
-
-    CommandLineInput(String command) throws NumberFormatException {
-        String[] splitCommand = command.split(" ");
-
-        if (splitCommand.length < 2) {
-            throw new IllegalArgumentException("command wasn't long enough");
-        }
-
-        numberOfArguments = Math.min(splitCommand.length-1, 3);
-
-        parameter1 = Integer.parseInt(splitCommand[1]);
-
-        if (splitCommand.length > 2) {
-            parameter2 = Integer.parseInt(splitCommand[2]);
-        }
-
-        if (splitCommand.length > 3) {
-            parameter3 = Float.parseFloat(splitCommand[3]);
-        }
     }
 }

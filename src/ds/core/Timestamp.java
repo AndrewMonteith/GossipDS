@@ -1,13 +1,9 @@
 package ds.core;
 
 import java.io.Serializable;
-import java.lang.annotation.AnnotationTypeMismatchException;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static ds.core.Utils.assertCondition;
 
 /**
  * The timestamp is used within the distributed network to describe the state of the network in terms of num. of updatelog
@@ -17,6 +13,13 @@ import static ds.core.Utils.assertCondition;
  */
 public class Timestamp implements Comparable<Timestamp>, Serializable {
     private List<Integer> list;
+
+    public Timestamp(int capacity) {
+        list = new ArrayList<>(capacity);
+        for (int i = 0; i < capacity; ++i) {
+            list.add(i, 0);
+        }
+    }
 
     public int getDimension() {
         return list.size();
@@ -29,15 +32,6 @@ public class Timestamp implements Comparable<Timestamp>, Serializable {
     public void set(int i, int k) {
         list.set(i, k);
     }
-
-    public Timestamp(int capacity) {
-        list = new ArrayList<>(capacity);
-        for (int i = 0; i < capacity; ++i) {
-            list.add(i, 0);
-        }
-    }
-
-    public Timestamp(List<Integer> list) { this.list = list; }
 
     public boolean isAfter(Timestamp timestamp) {
         for (int i = 0; i < list.size(); ++i) {
@@ -59,10 +53,15 @@ public class Timestamp implements Comparable<Timestamp>, Serializable {
         return true;
     }
 
-    public boolean isBefore(Timestamp timestamp) {
+    private boolean isBefore(Timestamp timestamp) {
         return !isAfter(timestamp);
     }
 
+    /**
+     * Partial order <= for a timestamp
+     * @param timestamp
+     * @return this <= timestamp
+     */
     public boolean isBeforeOrEqual(Timestamp timestamp) {
         return isBefore(timestamp) || isEqual(timestamp);
     }
@@ -85,7 +84,7 @@ public class Timestamp implements Comparable<Timestamp>, Serializable {
             return false;
         }
 
-        return this.compareTo((Timestamp)t) == 0;
+        return this.compareTo((Timestamp) t) == 0;
     }
 
     @Override
@@ -102,29 +101,6 @@ public class Timestamp implements Comparable<Timestamp>, Serializable {
     @Override
     public String toString() {
         return Arrays.toString(list.toArray());
-    }
-
-    public Timestamp(int... nums) {
-        this.list = new ArrayList<>();
-        for (int i : nums) {
-            list.add(i);
-        }
-    }
-
-    public static void main(String[] args) {
-        Timestamp t1 = new Timestamp(1, 2, 3);
-        Timestamp t2 = new Timestamp(4, 5, 6);
-        Timestamp t3 = new Timestamp(3, 5, 6);
-        Timestamp t4 = new Timestamp(3, 5, 6);
-        Timestamp t5 = new Timestamp(1, 0, 0);
-        Timestamp t6 = new Timestamp(0, 1, 0);
-
-        assertCondition(t1.isBefore(t2), "(1, 2, 3) <= (4, 5, 6)");
-        assertCondition(!t3.isBefore(t1), "(3, 5, 6) </= (1, 2, 3)");
-        assertCondition(t3.isBeforeOrEqual(t3), "(3, 5, 6) <= (3, 5, 6)");
-        assertCondition(t3.isBeforeOrEqual(t2), "(3, 5, 6) <= (4, 5, 6)");
-        assertCondition(t3.equals(t4), "(3, 5, 6) = (3, 5, 6)");
-        assertCondition(t5.isAfter(t6), "(1, 0, 0) </= (0, 1, 0)");
     }
 }
 

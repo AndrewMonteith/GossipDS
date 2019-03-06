@@ -11,11 +11,16 @@ import java.rmi.RemoteException;
 import java.util.Scanner;
 import java.util.function.Function;
 
+import static ds.core.NetworkSimulator.NUMBER_OF_REPLICAS;
+
 @FunctionalInterface
 interface FEMutationRequest {
     boolean perform(RequestParameters parameters) throws RemoteException;
 }
 
+/**
+ * Distributed System Client that connects to a front end.
+ */
 public class Client {
 
     private Scanner scanner = new Scanner(System.in);
@@ -42,6 +47,12 @@ public class Client {
         }
     }
 
+    /**
+     * Prints the response of a query request onto the screen
+     * in a user friendly format.
+     * @param movieDetails details returned from the front end
+     * @param userId userId that performed the query request
+     */
     private void printQueryResultsToScreen(MovieDetails movieDetails, int userId) {
         Movie movie = movieDetails.getMovie();
         RankingCounter rankings = movieDetails.getRankingCounter();
@@ -56,6 +67,11 @@ public class Client {
         System.out.println("Average Rating:" + rankings.getAverageRanking());
     }
 
+    /**
+     * Contacts the front end to do a query request.
+     * @param command input from the cmdline client
+     * @throws RemoteException
+     */
     private void performQueryCommand(CommandLineInput command) throws RemoteException {
         assertNumberOfParameters(command, 1);
 
@@ -79,20 +95,35 @@ public class Client {
         System.out.println(getMessage.apply(success));
     }
 
+    /**
+     * Contacts the front end to do a update request.
+     * @param command input from the cmdline client
+     * @throws RemoteException
+     */
     private void performUpdateCommand(CommandLineInput command) throws RemoteException {
         performMutationRequest(command, frontEnd::update,
                 success -> success ? "Update operation was successful" : "Cannot update non-existent rating");
     }
 
+    /**
+     * Contacts the front end to do a submit request
+     * @param command input from the cmdline client
+     * @throws RemoteException
+     */
     private void performSubmitCommand(CommandLineInput command) throws RemoteException {
         performMutationRequest(command, frontEnd::submit,
                 success -> success ? "Submit operation was successful" : "Cannot submit an existent rating");
     }
 
+    /**
+     * Changes the status of a replica via the frontend
+     * @param command input from the cmdline client
+     * @throws RemoteException
+     */
     private void performChangeStatusCommand(CommandLineInput command) throws RemoteException {
         int replicaId = command.getParameter1();
 
-        if (replicaId < 0 || replicaId > 3) {
+        if (replicaId < 0 || replicaId > NUMBER_OF_REPLICAS) {
             System.out.println("Replica Id must be 0, 1, or 2");
             return;
         }

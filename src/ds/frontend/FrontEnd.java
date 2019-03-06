@@ -12,13 +12,21 @@ import java.util.function.Function;
 
 import static ds.core.NetworkSimulator.NUMBER_OF_REPLICAS;
 
+/**
+ * Frontend of a distributed network.
+ * Contains only required functionality for a DS with a single frontend.
+ */
 public class FrontEnd implements FrontEndApi {
     private ReplicaPicker replicaPicker;
 
-    private Timestamp timestamp = new Timestamp(NUMBER_OF_REPLICAS);
+    private Timestamp feTimestamp = new Timestamp(NUMBER_OF_REPLICAS);
+
+    public FrontEnd() throws RemoteException {
+        replicaPicker = new ReplicaPicker();
+    }
 
     private Request createRequestFromParameters(RequestParameters parameters) {
-        return new Request(parameters, timestamp.copy());
+        return new Request(parameters, feTimestamp.copy());
     }
 
     @Override
@@ -27,7 +35,7 @@ public class FrontEnd implements FrontEndApi {
 
         QueryResponse response = replica.query(createRequestFromParameters(parameters));
 
-        timestamp.merge(response.getTimestamp());
+        feTimestamp.merge(response.getTimestamp());
 
         return response.getMovieDetails();
     }
@@ -36,17 +44,12 @@ public class FrontEnd implements FrontEndApi {
         replicaPicker.resetLastContactedState();
     }
 
-    @FunctionalInterface
-    private interface MutationRequestMaker {
-        MutationResponse sendRequest(ReplicaApi replica, Request request) throws RemoteException;
-    }
-
     private boolean makeMutationRequests(RequestParameters parameters,
                                          MutationRequestMaker requestMaker)
-            throws RemoteException
-    {
+            throws RemoteException {
 
-        Timestamp originalTimestamp = timestamp.copy();
+        Timestamp originalTimestamp = feTimestamp.copy();
+
         Function<ReplicaApi, MutationResponse> makeRequestSafe = replica -> {
             Request request = new Request(parameters, originalTimestamp);
 
@@ -59,9 +62,13 @@ public class FrontEnd implements FrontEndApi {
             return null;
         };
 
+        /*
+          Notice below we pick 2 replicas to send the update request to
+          This means that we can handle 1 fault in the network.
+         */
         return replicaPicker.pickReplicasToContact(2).stream()
                 .map(makeRequestSafe)
-                .peek(response -> timestamp.merge(response.getTimestamp()))
+                .peek(response -> feTimestamp.merge(response.getTimestamp()))
                 .allMatch(MutationResponse::isSuccess);
     }
 
@@ -79,10 +86,12 @@ public class FrontEnd implements FrontEndApi {
     public void changeReplicaStatus(int replicaId, ReplicaStatus status) throws RemoteException {
         try {
             replicaPicker.getReplica(replicaId).setReplicaStatus(status);
-        } catch (NotActiveException ignored) {}
+        } catch (NotActiveException ignored) {
+        }
     }
 
-    public FrontEnd() throws RemoteException {
-        replicaPicker = new ReplicaPicker();
+    @FunctionalInterface
+    private interface MutationRequestMaker {
+        MutationResponse sendRequest(ReplicaApi replica, Request request) throws RemoteException;
     }
 }

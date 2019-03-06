@@ -15,23 +15,50 @@ import java.util.*;
 
 import static ds.core.NetworkSimulator.NUMBER_OF_REPLICAS;
 
+/**
+ * The replica class is the core component of the distributed system.
+ */
 public class Replica extends TimerTask implements ReplicaApi {
     private int replicaId;
 
+    /**
+     * Update log of the replica contains all known updates seen by the replica
+     * that it believes has not been seen by every replica in the network
+     */
     private UpdateLog updateLog = new UpdateLog();
 
+    /**
+     * Timestamp that reflects all entries in the update log
+     */
     private Timestamp replicaTimestamp = new Timestamp(NUMBER_OF_REPLICAS);
 
+    /**
+     * Current status of the replica
+     */
     private ReplicaStatus status = ReplicaStatus.ACTIVE;
 
+    /**
+     * Timestamp that reflects updates in value
+     */
     private Timestamp valueTimestamp = new Timestamp(NUMBER_OF_REPLICAS);
 
+    /**
+     * Actual value we're querying and mutating
+     */
     private ReplicaValue value = new ReplicaValue();
 
     private StubLoader stubLoader;
 
+    /**
+     * All operations we have executed
+     * In real world we would clear these out say 60 seconds after having been added
+     */
     private Set<UUID> executedOperations = new HashSet<>();
 
+    /**
+     * Estimated replica timestamps of all replicas which is updated
+     * through gossip messages
+     */
     private List<Timestamp> timestampTable = new ArrayList<>();
 
     public Replica(int replicaId) throws RemoteException {
@@ -55,12 +82,20 @@ public class Replica extends TimerTask implements ReplicaApi {
         this.status = status;
     }
 
+    /**
+     * Merges an update log from a list of entries, typically from a gossip message.
+     * @param entries
+     */
     private void mergeUpdateLog(List<UpdateLogEntry> entries) {
         entries.stream()
                 .filter(entry -> !entry.getUpdateTimestamp().isBeforeOrEqual(replicaTimestamp))
                 .forEach(updateLog::add);
     }
 
+    /**
+     * synchronizes timestamps with a gossip message
+     * @param message
+     */
     private void updateTimestamps(GossipMessage message) {
         replicaTimestamp.merge(message.getReplicaTimestamp());
 
@@ -85,13 +120,18 @@ public class Replica extends TimerTask implements ReplicaApi {
 
     @Override
     public List<UpdateLogEntry> findAllRequiredUpdates(Timestamp timestamp) throws RemoteException {
-        return updateLog.anyEntryThat(entry -> timestamp.isAfter(entry.getUpdateRequest().getTimestamp()    ));
+        return updateLog.anyEntryThat(entry -> timestamp.isAfter(entry.getUpdateRequest().getTimestamp()));
     }
 
     private boolean haveProcessedRequest(Request request) {
         return executedOperations.contains(request.getUid());
     }
 
+    /**
+     * Executes the update if it hasn't seen it before
+     * @param entry to be executed
+     * @return whether the update was successfully executed
+     */
     private boolean executeEntry(UpdateLogEntry entry) {
         if (haveProcessedRequest(entry.getUpdateRequest())) {
             return false;
@@ -115,6 +155,13 @@ public class Replica extends TimerTask implements ReplicaApi {
         while (updateLog.hasStableEntry(valueTimestamp) && executeStableUpdates()) ;
     }
 
+    /**
+     * Synchronizes the update log with a replica
+     * @param replicaId replica to synchronize with
+     * @param requiredTimestamp timestamp to catchup to
+     * @throws NotActiveException if replica is offline
+     * @throws RemoteException
+     */
     private void catchupUpdateLog(int replicaId, Timestamp requiredTimestamp) throws NotActiveException, RemoteException {
         ReplicaApi replica = stubLoader.getReplicaStub(replicaId);
 
@@ -123,6 +170,11 @@ public class Replica extends TimerTask implements ReplicaApi {
         entries.forEach(updateLog::add);
     }
 
+    /**
+     * Makes value as up to date as possible with a given timestamp
+     * @param requiredTimestamp to be up to date with
+     * @throws RemoteException
+     */
     private void catchupValue(Timestamp requiredTimestamp) throws RemoteException {
         for (int i = 0; i < valueTimestamp.getDimension(); ++i) {
             if (valueTimestamp.get(i) < requiredTimestamp.get(i)) {
@@ -233,25 +285,8 @@ public class Replica extends TimerTask implements ReplicaApi {
         }
     }
 
-    private void changeReplicaStatus() {
-        Random r = new Random();
-
-        int i = r.nextInt(100);
-        if (i < 10) {
-            status = ReplicaStatus.OFFLINE;
-        } else if (i < 20) {
-            status = ReplicaStatus.OVERLOADED;
-        } else {
-            status = ReplicaStatus.ACTIVE;
-        }
-
-        System.out.println("Changed status to " + status);
-    }
-
     @Override
     public void run() {
-//        changeReplicaStatus();
-
         broadcastGossipMessages();
     }
 }
