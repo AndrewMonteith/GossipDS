@@ -140,6 +140,7 @@ public class Client {
         System.out.println("submit <movie-id> <user-id> <rating>");
         System.out.println("update <movie-id> <user-id> <rating>");
         System.out.println("status <replica-id> <status-id> (0=Online, 1=Overloaded, 2=Offline)");
+        System.out.println("quit - to exit");
     }
 
     private String askForCommand() {
@@ -154,6 +155,10 @@ public class Client {
             String input = askForCommand();
 
             try {
+                if ("quit".equals(input)) {
+                    return;
+                }
+
                 CommandLineInput command = new CommandLineInput(input);
 
                 if (input.startsWith("query ")) {
@@ -164,8 +169,6 @@ public class Client {
                     performSubmitCommand(command);
                 } else if (input.startsWith("status")) {
                     performChangeStatusCommand(command);
-                } else if ("quit".equals(input)) {
-                    break;
                 } else {
                     System.out.println("Unknown command");
                     showHelpPrompt();

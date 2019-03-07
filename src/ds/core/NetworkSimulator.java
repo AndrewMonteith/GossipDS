@@ -40,16 +40,19 @@ public class NetworkSimulator {
      * - Whether a replica will always provide consistent data to the frontend
      */
     private static final boolean doFrontendTests = false;
-
     /**
      * How often a replica will gossip.
      */
     private static final long GOSSIP_PERIOD = 10000; // milliseconds
-
+    private static boolean TESTS_RUNNING = false;
     private Registry registry;
 
     private NetworkSimulator() throws RemoteException {
         registry = LocateRegistry.createRegistry(13007);
+    }
+
+    public static boolean areTestsRunning() {
+        return TESTS_RUNNING;
     }
 
     private static void safeSleep(long milliseconds) {
@@ -150,6 +153,8 @@ public class NetworkSimulator {
     }
 
     private static void doTestsWithFrontend(FrontEnd serviceApi, Map<Integer, ReplicaApi> replicas) throws RemoteException {
+        TESTS_RUNNING = true;
+
         doTestsWithQuerying(serviceApi, replicas);
         doTestsWithUpdate(serviceApi, replicas);
         doTestsWithSubmit(serviceApi, replicas);
@@ -164,6 +169,7 @@ public class NetworkSimulator {
         }
 
         System.out.println(" --- FINISHED ALL TESTS ---");
+        TESTS_RUNNING = false;
     }
 
     public static void main(String[] args) {

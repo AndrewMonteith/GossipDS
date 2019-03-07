@@ -1,6 +1,7 @@
 package ds.replica;
 
 import ds.client.RequestParameters;
+import ds.core.NetworkSimulator;
 import ds.core.StubLoader;
 import ds.core.Timestamp;
 import ds.frontend.MutationResponse;
@@ -70,13 +71,36 @@ public class Replica extends TimerTask implements ReplicaApi {
         }
     }
 
+    private void randomlyChangeStatus() throws RemoteException {
+        if (NetworkSimulator.areTestsRunning()) {
+            return; // During the tests we manually change the state.
+        }
+
+        Random r = new Random();
+        int n = r.nextInt(100);
+
+        if (n < 8) {
+            setReplicaStatus(ReplicaStatus.OFFLINE);
+        } else if (n < 20) {
+            setReplicaStatus(ReplicaStatus.OVERLOADED);
+        } else {
+            setReplicaStatus(ReplicaStatus.ACTIVE);
+        }
+    }
+
     @Override
     public ReplicaStatus requestStatus() throws RemoteException {
+        randomlyChangeStatus();
+
         return status;
     }
 
     @Override
     public void setReplicaStatus(ReplicaStatus status) throws RemoteException {
+        if (status == this.status) {
+            return;
+        }
+
         System.out.printf("Replica %d is updating it's status to %s...\n", replicaId, status);
 
         this.status = status;

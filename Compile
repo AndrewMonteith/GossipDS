@@ -1,0 +1,2 @@
+#!/bin/sh
+javac -d . ./src/ds/*/*.java ./src/ds/replica/updatelog/*.java

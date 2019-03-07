@@ -1,0 +1,18 @@
+This project is implemented using java and should be tested on a Linux machine.
+To compile the project use the shell script file provided.
+
+We are querying the movie dataset provided in the assignment.
+
+This toy network boasts the following features:
+	- Casual update ordering using the gossip architecture.
+	- The ability to query ratings, submit new ratings and update existing ratings using a client.
+	- The network can also handle 1 fault since it sends mutation requests to 2 replicas if applicable.
+
+I understand testing a network can be quite difficult hence I have included a number of unit tests within java.core.NetworkSimulator
+which check the functionality of the network. Simply change `doFrontendTests` to true to run them. (Don't have this to true if you youself are testing the network)
+
+To run the required components on the distributed network run:
+java ds.core.NetworkSimulator
+
+To run an instance of the client run:
+java ds.client.Client

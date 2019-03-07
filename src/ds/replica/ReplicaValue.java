@@ -22,6 +22,10 @@ public class ReplicaValue {
     MovieDetails getDetailsForMovie(RequestParameters parameters) {
         int userId = parameters.getUserId();
 
+        if (!movies.containsKey(parameters.getMovieId())) {
+            throw new IllegalArgumentException("that movie id doesn't exist");
+        }
+
         Movie movie = movies.get(parameters.getMovieId());
         RankingCounter ranking = rankings.get(parameters.getMovieId());
 

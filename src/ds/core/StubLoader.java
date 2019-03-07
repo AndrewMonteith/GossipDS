@@ -59,6 +59,10 @@ public class StubLoader {
         }
     }
 
+    public ReplicaApi getCachedReplica(int replicaId) {
+        return replicaStubs.get(replicaId);
+    }
+
     /**
      * Returns last known status for a replica, may be old data since it's cached.
      *

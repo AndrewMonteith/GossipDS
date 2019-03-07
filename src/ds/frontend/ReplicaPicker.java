@@ -10,6 +10,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static ds.core.NetworkSimulator.NUMBER_OF_REPLICAS;
 
@@ -58,16 +59,9 @@ class ReplicaPicker {
     }
 
     private List<ReplicaApi> loadReplicasFromIds(List<Integer> replicaIds) {
-        List<ReplicaApi> replicas = new ArrayList<>();
-
-        for (int replicaId : replicaIds) {
-            try {
-                replicas.add(stubLoader.getReplicaStub(replicaId));
-            } catch (RemoteException | NotActiveException ignored) {
-            }
-        }
-
-        return replicas;
+        return replicaIds.stream()
+                .map(stubLoader::getCachedReplica)
+                .collect(Collectors.toList());
     }
 
     /**
